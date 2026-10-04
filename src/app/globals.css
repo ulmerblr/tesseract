@@ -1,26 +1,73 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-ink: #08080b;
+  --color-panel: #121217;
+  --color-panel-2: #1b1b23;
+  --color-line: #2e2e3a;
+  --color-fg: #f6f6f8;
+  --color-muted: #a3a3b2;
+  --color-accent: #b8ff24;
+  --color-accent-ink: #0b0f00;
+  --color-danger: #ff3358;
+  --color-warn: #ffc933;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-base font-extrabold tracking-tight transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-accent {
+  @apply btn bg-accent text-accent-ink hover:bg-white;
+}
+
+@utility btn-ghost {
+  @apply btn border-2 border-line bg-transparent text-fg hover:border-fg;
+}
+
+@utility btn-danger {
+  @apply btn border-2 border-danger bg-transparent text-danger hover:bg-danger hover:text-white;
+}
+
+@utility btn-sm {
+  @apply min-h-9! rounded-lg! px-3! py-1.5! text-sm!;
+}
+
+@utility field {
+  @apply w-full rounded-xl border-2 border-line bg-panel-2 px-4 py-3 text-base text-fg placeholder:text-muted/60 focus:border-accent focus:outline-none;
+}
+
+@utility label {
+  @apply mb-1.5 block text-xs font-bold tracking-[0.14em] text-muted uppercase;
+}
+
+@utility card {
+  @apply rounded-2xl border-2 border-line bg-panel p-5 sm:p-7;
+}
+
+@utility display-title {
+  @apply text-4xl leading-[0.95] font-black tracking-tight sm:text-6xl;
+}
+
+@keyframes drop {
+  from {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
