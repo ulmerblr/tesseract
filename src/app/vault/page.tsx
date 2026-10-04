@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useVault } from "@/components/VaultProvider";
 import { Page, RequireUnlocked } from "@/components/RequireUnlocked";
 import { LoginEditor, cleanFields } from "@/components/LoginEditor";
+import { LocalPromise } from "@/components/LocalPromise";
 import { emptyFields, type Login, type LoginFields } from "@/lib/types";
 
 type Mode = { kind: "list" } | { kind: "view"; id: string } | { kind: "edit"; id: string } | { kind: "new" };
@@ -40,7 +41,7 @@ function Vault() {
         <div>
           <h1 className="display-title">Vault</h1>
           <p className="mt-2 text-muted">
-            {logins.length} login{logins.length === 1 ? "" : "s"} · encrypted in this browser
+            {logins.length} login{logins.length === 1 ? "" : "s"} · encrypted on this laptop
           </p>
         </div>
         <div className="flex gap-2">
@@ -124,6 +125,7 @@ function Vault() {
           )}
         </section>
       </div>
+      <LocalPromise className="mt-12 border-t-2 border-line pt-6" />
     </Page>
   );
 }
@@ -146,7 +148,7 @@ function LoginDetail({ login, onBack, onEdit }: { login: Login; onBack(): void; 
     try {
       await copy(text, label);
     } catch {
-      setCopyError("This browser blocked clipboard access.");
+      setCopyError("This device blocked clipboard access.");
     }
   }
 

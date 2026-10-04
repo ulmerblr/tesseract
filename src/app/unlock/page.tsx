@@ -6,6 +6,7 @@ import { useVault } from "@/components/VaultProvider";
 import { Page } from "@/components/RequireUnlocked";
 import { LockIcon } from "@/components/TopBar";
 import { UnlockPanel } from "@/components/UnlockPanel";
+import { LocalPromise } from "@/components/LocalPromise";
 
 function nextPath(): string {
   const next = new URLSearchParams(window.location.search).get("next") ?? "/vault";
@@ -44,6 +45,7 @@ export default function UnlockPage() {
           <UnlockPanel key={String(biometricOn)} variant="page" autoPrompt={lockReason === null} />
         )}
       </div>
+      <LocalPromise className="mt-8" />
     </Page>
   );
 }

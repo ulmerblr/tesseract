@@ -172,7 +172,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       await navigator.clipboard.writeText("");
       setClip({ label: "", secondsLeft: 0, message: "Clipboard cleared." });
     } catch {
-      setClip({ label: "", secondsLeft: 0, message: "Couldn't clear the clipboard automatically (the tab wasn't in focus). Copy something else to overwrite it." });
+      setClip({ label: "", secondsLeft: 0, message: "Couldn't clear the clipboard automatically (Tesseract wasn't the active window). Copy something else to overwrite it." });
     }
     window.setTimeout(() => setClip((c) => (c && c.secondsLeft === 0 ? null : c)), 4000);
   }, []);

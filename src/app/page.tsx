@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useVault } from "@/components/VaultProvider";
+import { LocalPromise } from "@/components/LocalPromise";
 
 const STEPS = [
-  { n: "01", title: "Create a master password", body: "One password unlocks everything. It never leaves this browser and is never stored.", href: "/setup" },
+  { n: "01", title: "Create a master password", body: "One password unlocks everything. It never leaves this laptop and is never stored.", href: "/setup" },
   { n: "02", title: "Turn on face or fingerprint", body: "Optional. Windows Hello or Touch ID unlocks the vault through a passkey. Your face and fingerprint never leave the operating system.", href: "/admin" },
   { n: "03", title: "Bring in your passwords", body: "Drop in a spreadsheet, a Google export or a Word doc of notes. Or click a built-in sample.", href: "/import" },
   { n: "04", title: "Use the vault", body: "Search, open, copy (the clipboard clears itself in 30 seconds), edit, add new ones.", href: "/vault" },
-  { n: "05", title: "Try it on a website", body: "A pretend store shows what the Tesseract browser extension will do: fill logins, make strong passwords, offer to save.", href: "/larkspur/login" },
+  { n: "05", title: "Try Tesseract autofill", body: "A pretend store shows how Tesseract autofill works: fill logins, make strong passwords, offer to save.", href: "/larkspur/login" },
   { n: "06", title: "Admin", body: "Paste an Anthropic API key to switch import from simulated to real Claude reading. Reset the demo.", href: "/admin" },
 ];
 
@@ -33,6 +34,7 @@ export default function Home() {
         <p className="-mt-2 max-w-3xl text-3xl leading-tight font-black tracking-tight sm:-mt-6 sm:text-5xl">
           Your passwords. Your machine. <span className="text-accent">Nobody else.</span>
         </p>
+        <LocalPromise className="mt-5" />
         <Link
           href={enter}
           className="btn-accent mt-8 px-10 py-5 text-xl shadow-[0_0_40px_-6px_var(--color-accent)] sm:text-2xl"

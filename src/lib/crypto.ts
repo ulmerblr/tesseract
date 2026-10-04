@@ -170,13 +170,13 @@ export async function createVault(password: string): Promise<{ session: VaultSes
 
 export async function saveVault(session: VaultSession, data: VaultData): Promise<void> {
   const stored = readStored();
-  if (!stored) throw new Error("No vault found in this browser.");
+  if (!stored) throw new Error("No vault found on this laptop.");
   writeStored({ ...stored, vault: await encryptVault(session.vaultKey, data) });
 }
 
 export async function openWithPassword(password: string): Promise<{ session: VaultSession; data: VaultData }> {
   const stored = readStored();
-  if (!stored) throw new Error("No vault found in this browser.");
+  if (!stored) throw new Error("No vault found on this laptop.");
   const kek = await passwordKek(password, fromB64(stored.password.salt), stored.password.iterations);
   let vaultKey: CryptoKey;
   try {
@@ -204,7 +204,7 @@ export async function addBiometricWrap(
   prfSalt: string,
 ): Promise<void> {
   const stored = readStored();
-  if (!stored) throw new Error("No vault found in this browser.");
+  if (!stored) throw new Error("No vault found on this laptop.");
   const w = await wrap(session.vaultKey, await prfKek(prfOutput));
   writeStored({ ...stored, biometric: { ...w, credentialId, prfSalt, enabledAt: Date.now() } });
 }

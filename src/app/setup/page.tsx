@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useVault } from "@/components/VaultProvider";
 import { Page } from "@/components/RequireUnlocked";
+import { LocalPromise } from "@/components/LocalPromise";
 import { FingerprintIcon } from "@/components/UnlockPanel";
 import { legacyVaultExists } from "@/lib/crypto";
 import { checkBiometricSupport, describeBiometricError, type BiometricSupport } from "@/lib/biometric";
@@ -94,7 +95,7 @@ export default function SetupPage() {
     try {
       await create(pw);
     } catch {
-      setError("Couldn't create the vault in this browser.");
+      setError("Couldn't create the vault on this laptop.");
       setBusy(false);
       return;
     }
@@ -115,6 +116,7 @@ export default function SetupPage() {
       <div className="font-mono text-sm font-bold text-accent">FIRST RUN</div>
       <h1 className="display-title mt-2">Create your master password</h1>
       <p className="mt-4 text-lg text-muted">This one password encrypts your whole vault. Tesseract never stores it and never sends it anywhere.</p>
+      <LocalPromise className="mt-4 justify-start" />
 
       <div className="mt-6 rounded-2xl border-2 border-warn bg-warn/10 p-5">
         <div className="text-lg font-black text-warn uppercase">Forget it and the vault is gone forever.</div>

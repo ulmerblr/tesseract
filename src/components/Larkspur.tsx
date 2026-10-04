@@ -21,8 +21,8 @@ export function LarkspurFrame({ path, bar, children }: { path: string; bar?: Rea
       <div className="mb-4 rounded-2xl border-2 border-accent bg-accent/10 p-4 sm:p-5">
         <div className="text-lg font-black tracking-wide text-accent uppercase sm:text-xl">Simulated website</div>
         <p className="mt-1 text-sm sm:text-base">
-          Larkspur Outfitters is invented. This page shows what the <b>Tesseract browser extension</b> will do on real sites.
-          Look for the <TBadgeGlyph /> cube badge inside the password box.
+          Larkspur Outfitters is invented. <b>This shows how Tesseract autofill works.</b> Look for the <TBadgeGlyph /> cube
+          badge inside the password box.
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/larkspur/login" className="rounded-lg bg-fg px-3 py-1.5 text-ink">Pretend log-in page</Link>
@@ -104,7 +104,7 @@ export function TesseractBadge(props: BadgeProps) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="Tesseract"
+        aria-label="Tesseract autofill"
         aria-expanded={open}
         className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[#08080b] ring-2 ring-accent/0 transition hover:ring-accent"
       >
@@ -114,8 +114,8 @@ export function TesseractBadge(props: BadgeProps) {
         <div className="absolute top-full right-0 z-20 mt-2 w-[min(20rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border-2 border-accent bg-panel text-fg shadow-2xl shadow-black/50">
           <div className="flex items-center gap-2 border-b-2 border-line px-4 py-2.5">
             <Cube size={26} />
-            <span className="font-black">Tesseract</span>
-            <span className="ml-auto text-[10px] font-bold tracking-wider text-muted uppercase">simulated extension</span>
+            <span className="font-black">Tesseract autofill</span>
+            <span className="ml-auto text-[10px] font-bold tracking-wider text-muted uppercase">demo</span>
           </div>
 
           {props.mode === "signup" && (
@@ -180,7 +180,7 @@ export function VaultGate() {
   if (status === "none") {
     return (
       <div className="p-4 text-sm">
-        <p className="font-bold">Tesseract isn&apos;t set up in this browser yet.</p>
+        <p className="font-bold">Tesseract isn&apos;t set up on this laptop yet.</p>
         <Link href="/setup" className="btn-accent btn-sm mt-3">Set up Tesseract</Link>
       </div>
     );

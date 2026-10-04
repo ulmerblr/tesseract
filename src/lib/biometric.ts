@@ -15,8 +15,10 @@ export type BiometricSupport =
 
 const PRF_UNSUPPORTED_KEY = "tesseract.prfUnsupported";
 
-const NO_PRF_REASON =
-  "Face/fingerprint unlock is off: this browser or device can't use passkeys to decrypt (it lacks WebAuthn PRF support).";
+// Shown whenever face/fingerprint unlock can't be used (no passkeys, no
+// built-in biometrics, or no WebAuthn PRF support).
+const UNAVAILABLE = "Face/fingerprint unlock isn't available on this laptop's current setup.";
+const NO_PRF_REASON = UNAVAILABLE;
 
 function b64url(bytes: Uint8Array): string {
   return toB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -41,7 +43,7 @@ function asArrayBuffer(src: BufferSource): ArrayBuffer {
 
 export async function checkBiometricSupport(): Promise<BiometricSupport> {
   if (typeof window === "undefined" || !window.PublicKeyCredential || !window.isSecureContext) {
-    return { available: false, noBiometrics: true, reason: "This browser doesn't support passkeys." };
+    return { available: false, noBiometrics: true, reason: UNAVAILABLE };
   }
   let platform = false;
   try {
@@ -50,7 +52,7 @@ export async function checkBiometricSupport(): Promise<BiometricSupport> {
     platform = false;
   }
   if (!platform) {
-    return { available: false, noBiometrics: true, reason: "This device has no built-in face or fingerprint sign-in the browser can use." };
+    return { available: false, noBiometrics: true, reason: UNAVAILABLE };
   }
   try {
     if (localStorage.getItem(PRF_UNSUPPORTED_KEY)) return { available: false, noBiometrics: false, reason: NO_PRF_REASON };

@@ -196,7 +196,7 @@ function Importer() {
       <ReaderBadge realReader={realReader} />
       <h1 className="display-title mt-4">Bring in your existing passwords</h1>
       <p className="mt-3 max-w-2xl text-lg text-muted">
-        Excel, CSV or Word. The file is opened right here in your browser.
+        Excel, CSV or Word. The file is opened right here on this laptop.
         {realReader.on
           ? " Its text is sent once to Claude to be read, then you check every entry before anything is saved."
           : " Nothing is uploaded. You check every entry before anything is saved."}
@@ -268,13 +268,15 @@ function Importer() {
 
 function ReaderBadge({ realReader }: { realReader: { on: boolean; model: string } }) {
   return realReader.on ? (
-    <div className="inline-flex flex-wrap items-center gap-2 rounded-xl bg-accent px-4 py-2 text-lg font-black tracking-wide text-accent-ink uppercase">
-      Real Claude reading <span className="text-sm font-bold normal-case opacity-70">· {realReader.model}</span>
+    <div className="inline-block rounded-xl border-2 border-warn bg-warn/10 px-4 py-2">
+      <div className="text-lg font-black tracking-wide text-warn uppercase">
+        DEMO: READING USES CLAUDE ONLINE <span className="text-sm font-bold normal-case opacity-70">· {realReader.model}</span>
+      </div>
+      <div className="text-sm font-bold">The finished Tesseract reads files on your laptop. Nothing leaves it.</div>
     </div>
   ) : (
-    <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border-2 border-warn px-4 py-2 text-lg font-black tracking-wide text-warn uppercase">
-      Simulated reading
-      <Link href="/admin" className="text-sm font-bold normal-case underline opacity-80">add a key on Admin</Link>
+    <div className="inline-flex flex-wrap items-center gap-2 rounded-xl bg-accent px-4 py-2 text-lg font-black tracking-wide text-accent-ink uppercase">
+      READING ON THIS LAPTOP
     </div>
   );
 }

@@ -54,14 +54,14 @@ export default function AdminPage() {
       if (data.ok) setTest({ kind: "ok", text: `Success. The key works with ${data.model ?? model}.` });
       else setTest({ kind: "error", text: data.error ?? `Failed (${res.status}).` });
     } catch {
-      setTest({ kind: "error", text: "Couldn't reach the server." });
+      setTest({ kind: "error", text: "Couldn't run the key test. Check the internet connection and try again." });
     }
   }
 
   return (
     <Page>
       <h1 className="display-title">Admin</h1>
-      <p className="mt-3 text-lg text-muted">Settings for this browser only.</p>
+      <p className="mt-3 text-lg text-muted">Settings for this device only.</p>
 
       <section className="card mt-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -73,12 +73,12 @@ export default function AdminPage() {
           )}
         </div>
         <p className="mt-2 text-muted">
-          With a key saved, Import sends the file&apos;s text to this demo&apos;s server, which asks Claude to read it and sends the
-          logins back. The server doesn&apos;t log or keep the key or the file. Without a key, Import uses the simulated reader.
+          The key is saved on this device only. With a key saved, files you import are sent to Claude to be read, and the
+          logins come back here for you to check. The demo doesn&apos;t log or keep the key or the files. Without a key, files
+          are read on this laptop and nothing is sent anywhere.
         </p>
         <p className="mt-2 text-sm text-warn">
-          The key is kept in this browser&apos;s localStorage, so anyone using this browser could find it. Use a key you can
-          revoke after the demo.
+          Anyone who uses this device could find the saved key. Use a key you can revoke after the demo.
         </p>
 
         <label className="label mt-6" htmlFor="key">{savedKey ? "Replace the key" : "Paste a key"}</label>
@@ -138,7 +138,7 @@ export default function AdminPage() {
       <section className="card mt-6 border-danger">
         <h2 className="text-2xl font-black">Reset Demo</h2>
         <p className="mt-2 text-muted">
-          Wipes the encrypted vault from this browser and starts over at first run. The API key and model choice stay.
+          Wipes the encrypted vault from this laptop and starts over at first run. The API key and model choice stay.
         </p>
         {confirmReset ? (
           <div className="mt-4 flex flex-wrap gap-2">
