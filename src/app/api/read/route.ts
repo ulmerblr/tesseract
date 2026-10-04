@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { clientFor, describeError, isAllowedModel, json } from "@/lib/server/claude";
 
 // Reading a messy document can take a while, especially on Opus.
@@ -50,12 +50,11 @@ export async function POST(request: Request) {
   const source = kind === "word" ? "a Word document of free-form notes" : "a spreadsheet exported as CSV";
 
   try {
-    const response = await clientFor(apiKey.trim()).beta.messages.parse({
+    // Only the model chosen on the Admin page; no fallback to another model.
+    const response = await clientFor(apiKey.trim()).messages.parse({
       model,
       max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "medium", format: betaZodOutputFormat(ResultSchema) },
+      output_config: { effort: "medium", format: zodOutputFormat(ResultSchema) },
       system: SYSTEM,
       messages: [
         {
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
     });
 
     if (response.stop_reason === "refusal") {
-      return json({ error: "Claude declined to read this file. Try the simulated reader instead (clear the key on the Admin page)." }, 422);
+      return json({ error: `${model} declined to read this file. Try the other model, or clear the key on the Admin page to use the simulated reader.` }, 422);
     }
     if (response.stop_reason === "max_tokens") {
       return json({ error: "The file was too long for one pass. Try a smaller file." }, 422);

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Cube } from "./Cube";
+import { UnlockPanel } from "./UnlockPanel";
 import Link from "next/link";
 import { useVault } from "./VaultProvider";
-import { WrongPasswordError } from "@/lib/crypto";
 import { strongPassword } from "@/lib/password";
 import type { Login } from "@/lib/types";
 
@@ -21,7 +22,7 @@ export function LarkspurFrame({ path, bar, children }: { path: string; bar?: Rea
         <div className="text-lg font-black tracking-wide text-accent uppercase sm:text-xl">Simulated website</div>
         <p className="mt-1 text-sm sm:text-base">
           Larkspur Outfitters is invented. This page shows what the <b>Tesseract browser extension</b> will do on real sites.
-          Look for the <TBadgeGlyph /> badge inside the password box.
+          Look for the <TBadgeGlyph /> cube badge inside the password box.
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/larkspur/login" className="rounded-lg bg-fg px-3 py-1.5 text-ink">Pretend log-in page</Link>
@@ -29,9 +30,9 @@ export function LarkspurFrame({ path, bar, children }: { path: string; bar?: Rea
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border-2 border-line shadow-2xl shadow-black">
+      <div className="rounded-2xl border-2 border-line shadow-2xl shadow-black">
         {/* Fake browser chrome */}
-        <div className="flex items-center gap-2 bg-[#2a2a31] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-t-[14px] bg-[#2a2a31] px-3 py-2">
           <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
           <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
           <span className="h-3 w-3 rounded-full bg-[#28c840]" />
@@ -42,8 +43,8 @@ export function LarkspurFrame({ path, bar, children }: { path: string; bar?: Rea
         </div>
         <div className="relative">
           {/* Where the extension's bar drops down, just under the address bar */}
-          {bar && <div className="absolute inset-x-0 top-0 z-30 p-2 sm:p-3">{bar}</div>}
-          <div className="bg-[#f6f1e7] text-[#1f2a1f]">{children}</div>
+          {bar && <div className="pointer-events-none absolute inset-x-0 top-0 z-30 overflow-hidden p-2 pb-8 [&>*]:pointer-events-auto sm:p-3 sm:pb-10">{bar}</div>}
+          <div className="rounded-b-[14px] bg-[#f6f1e7] text-[#1f2a1f]">{children}</div>
         </div>
       </div>
     </main>
@@ -66,8 +67,8 @@ export function LarkspurHeader() {
 
 function TBadgeGlyph() {
   return (
-    <span className="mx-0.5 inline-flex h-5 w-5 items-center justify-center rounded bg-accent align-middle text-xs font-black text-accent-ink">
-      T
+    <span className="mx-0.5 inline-flex align-middle">
+      <Cube size={22} />
     </span>
   );
 }
@@ -105,14 +106,14 @@ export function TesseractBadge(props: BadgeProps) {
         onClick={() => setOpen((o) => !o)}
         aria-label="Tesseract"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#08080b] text-sm font-black text-accent ring-2 ring-accent/0 transition hover:ring-accent"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[#08080b] ring-2 ring-accent/0 transition hover:ring-accent"
       >
-        T
+        <Cube size={32} />
       </button>
       {open && (
         <div className="absolute top-full right-0 z-20 mt-2 w-[min(20rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border-2 border-accent bg-panel text-fg shadow-2xl shadow-black/50">
           <div className="flex items-center gap-2 border-b-2 border-line px-4 py-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-accent text-xs font-black text-accent-ink">T</span>
+            <Cube size={26} />
             <span className="font-black">Tesseract</span>
             <span className="ml-auto text-[10px] font-bold tracking-wider text-muted uppercase">simulated extension</span>
           </div>
@@ -174,7 +175,7 @@ export function TesseractBadge(props: BadgeProps) {
 }
 
 /** Shown in the dropdown or save bar when the vault isn't open. */
-export function VaultGate({ compact = false }: { compact?: boolean }) {
+export function VaultGate() {
   const { status } = useVault();
   if (status === "none") {
     return (
@@ -184,50 +185,5 @@ export function VaultGate({ compact = false }: { compact?: boolean }) {
       </div>
     );
   }
-  return <InlineUnlock compact={compact} />;
-}
-
-export function InlineUnlock({ compact = false }: { compact?: boolean }) {
-  const { unlock } = useVault();
-  const [pw, setPw] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  // Not a <form>: this sits inside the pretend site's own form, and forms can't nest.
-  async function submit() {
-    if (!pw || busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      await unlock(pw);
-    } catch (err) {
-      setError(err instanceof WrongPasswordError ? "Wrong master password." : "Couldn't open the vault.");
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={compact ? "flex flex-wrap items-center gap-2" : "grid gap-2 p-4"}>
-      {!compact && <p className="text-sm font-bold">Tesseract is locked. Unlock to continue.</p>}
-      <input
-        type="password"
-        aria-label="Master password"
-        placeholder="Master password"
-        className={`field py-2 text-sm ${compact ? "max-w-56" : ""}`}
-        value={pw}
-        onChange={(e) => setPw(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            void submit();
-          }
-        }}
-        autoComplete="current-password"
-      />
-      <button type="button" className="btn-accent btn-sm" disabled={busy || !pw} onClick={() => void submit()}>
-        {busy ? "Unlocking…" : "Unlock"}
-      </button>
-      {error && <p className="w-full text-sm font-bold text-danger">{error}</p>}
-    </div>
-  );
+  return <UnlockPanel variant="inline" autoPrompt />;
 }

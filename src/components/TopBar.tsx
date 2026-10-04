@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useVault } from "./VaultProvider";
+import { Cube } from "./Cube";
 
 const LINKS = [
   { href: "/", label: "Tour" },
@@ -17,7 +18,7 @@ function fmt(s: number) {
 }
 
 export function TopBar() {
-  const { status, lock, lockInSeconds } = useVault();
+  const { status, lock, lockInSeconds, autoLockPaused } = useVault();
   const pathname = usePathname();
 
   return (
@@ -29,9 +30,12 @@ export function TopBar() {
       </div>
       <div className="border-b-2 border-line bg-ink/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link href="/" className="text-xl font-black tracking-tighter sm:text-2xl">
-            TESSERACT<span className="text-accent">.</span>
-          </Link>
+          {pathname !== "/" && (
+            <Link href="/" className="flex items-center gap-2 text-xl font-black tracking-tighter sm:text-2xl" aria-label="Tesseract home">
+              <Cube size={36} />
+              <span className="hidden sm:inline">TESSERACT</span>
+            </Link>
+          )}
           <nav className="hidden flex-1 items-center gap-1 md:flex">
             {LINKS.map((l) => (
               <NavLink key={l.href} href={l.href} label={l.label} active={isActive(pathname, l.href)} />
@@ -41,7 +45,7 @@ export function TopBar() {
             {status === "unlocked" ? (
               <>
                 <span className="hidden font-mono text-xs text-muted sm:inline" title="Locks itself after 2 minutes without activity">
-                  auto-lock {fmt(lockInSeconds)}
+                  {autoLockPaused ? "auto-lock paused: import pending" : `auto-lock ${fmt(lockInSeconds)}`}
                 </span>
                 <button onClick={lock} className="btn-accent btn-sm">
                   <LockIcon /> Lock

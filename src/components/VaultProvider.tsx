@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { createVault, deleteVault, openVault, saveVault, vaultExists, type VaultKey } from "@/lib/crypto";
-import { newId, type Login, type LoginFields } from "@/lib/types";
+import { createVault, deleteVault, openWithPassword, saveVault, vaultExists, type VaultSession } from "@/lib/crypto";
+import * as bio from "@/lib/biometric";
+import { newId, type Login, type LoginFields, type VaultData } from "@/lib/types";
 import { useHydrated } from "@/lib/useHydrated";
 
 export const AUTO_LOCK_SECONDS = 120;
@@ -10,14 +11,22 @@ export const CLIPBOARD_SECONDS = 30;
 
 type Status = "loading" | "none" | "locked" | "unlocked";
 type ClipState = { label: string; secondsLeft: number; message?: string } | null;
+export type LockReason = "manual" | "idle" | null;
 
 type VaultContextValue = {
   status: Status;
   logins: Login[];
   lockInSeconds: number;
+  autoLockPaused: boolean;
+  lockReason: LockReason;
+  biometricOn: boolean;
   clip: ClipState;
   create(password: string): Promise<void>;
   unlock(password: string): Promise<void>;
+  unlockWithBiometric(signal?: AbortSignal): Promise<void>;
+  enableBiometric(): Promise<void>;
+  disableBiometric(): void;
+  setAutoLockPaused(paused: boolean): void;
   lock(): void;
   addLogins(items: LoginFields[]): Promise<Login[]>;
   updateLogin(id: string, fields: LoginFields): Promise<void>;
@@ -42,14 +51,20 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [tracked, setStatus] = useState<Status | null>(null);
   const status: Status = tracked ?? (!hydrated ? "loading" : vaultExists() ? "locked" : "none");
   const [logins, setLogins] = useState<Login[]>([]);
-  // The derived key lives only in memory, and only while unlocked.
-  const keyRef = useRef<VaultKey | null>(null);
+  // The vault key lives only in memory, and only while unlocked.
+  const keyRef = useRef<VaultSession | null>(null);
+  const [lockReason, setLockReason] = useState<LockReason>(null);
+  const [autoLockPaused, setAutoLockPaused] = useState(false);
+  // Bumped whenever face/fingerprint is turned on or off, so it re-reads storage.
+  const [bioVersion, setBioVersion] = useState(0);
+  const biometricOn = hydrated && bioVersion >= 0 && bio.biometricEnabled();
   const loginsRef = useRef<Login[]>([]);
   const lastActivity = useRef(0);
   const [lockInSeconds, setLockInSeconds] = useState(AUTO_LOCK_SECONDS);
   const [clip, setClip] = useState<ClipState>(null);
 
-  const lock = useCallback(() => {
+  const lock = useCallback((reason: LockReason = "manual") => {
+    setLockReason(reason);
     keyRef.current = null;
     loginsRef.current = [];
     setLogins([]);
@@ -64,22 +79,31 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     await saveVault(handle, { logins: next });
   }, []);
 
-  const create = useCallback(async (password: string) => {
-    const { handle, data } = await createVault(password);
-    keyRef.current = handle;
+  const opened = useCallback(({ session, data }: { session: VaultSession; data: VaultData }) => {
+    keyRef.current = session;
     loginsRef.current = data.logins;
     setLogins(data.logins);
     lastActivity.current = Date.now();
+    setLockReason(null);
     setStatus("unlocked");
   }, []);
 
-  const unlock = useCallback(async (password: string) => {
-    const { handle, data } = await openVault(password);
-    keyRef.current = handle;
-    loginsRef.current = data.logins;
-    setLogins(data.logins);
-    lastActivity.current = Date.now();
-    setStatus("unlocked");
+  const create = useCallback(async (password: string) => opened(await createVault(password)), [opened]);
+  const unlock = useCallback(async (password: string) => opened(await openWithPassword(password)), [opened]);
+  const unlockWithBiometric = useCallback(
+    async (signal?: AbortSignal) => opened(await bio.unlockWithBiometric(signal)),
+    [opened],
+  );
+
+  const enableBiometric = useCallback(async () => {
+    if (!keyRef.current) throw new Error("Unlock the vault first.");
+    await bio.enableBiometric(keyRef.current);
+    setBioVersion((v) => v + 1);
+  }, []);
+
+  const disableBiometric = useCallback(() => {
+    bio.disableBiometric();
+    setBioVersion((v) => v + 1);
   }, []);
 
   const addLogins = useCallback(
@@ -107,7 +131,10 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   );
 
   const resetDemo = useCallback(() => {
+    bio.disableBiometric();
     deleteVault();
+    setBioVersion((v) => v + 1);
+    setLockReason(null);
     keyRef.current = null;
     loginsRef.current = [];
     setLogins([]);
@@ -123,15 +150,17 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     const events = ["pointerdown", "pointermove", "keydown", "scroll", "touchstart", "wheel"] as const;
     events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
     const timer = window.setInterval(() => {
+      // Paused (e.g. an import preview still has rows): treat as active.
+      if (autoLockPaused) lastActivity.current = Date.now();
       const left = AUTO_LOCK_SECONDS - Math.floor((Date.now() - lastActivity.current) / 1000);
-      if (left <= 0) lock();
+      if (left <= 0) lock("idle");
       else setLockInSeconds(left);
     }, 1000);
     return () => {
       events.forEach((e) => window.removeEventListener(e, bump));
       window.clearInterval(timer);
     };
-  }, [status, lock]);
+  }, [status, lock, autoLockPaused]);
 
   // ----- Clipboard that clears itself -----
   const clipTimer = useRef<number | null>(null);
@@ -173,10 +202,17 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
         status,
         logins,
         lockInSeconds,
+        autoLockPaused,
+        lockReason,
+        biometricOn,
         clip,
         create,
         unlock,
-        lock,
+        unlockWithBiometric,
+        enableBiometric,
+        disableBiometric,
+        setAutoLockPaused,
+        lock: () => lock("manual"),
         addLogins,
         updateLogin,
         deleteLogin,

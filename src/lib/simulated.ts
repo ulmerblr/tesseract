@@ -41,11 +41,14 @@ function draft(partial: Partial<DraftLogin>): DraftLogin {
   };
 }
 
+/** Names a site by its web address, e.g. "https://www.larkspuroutfitters.example/login" → "larkspuroutfitters.example". */
 function siteFromUrl(url: string): string {
-  const host = url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0];
-  const parts = host.split(".");
-  const base = parts.length > 1 ? parts[parts.length - 2] : parts[0];
-  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .split(/[/?#]/)[0]
+    .toLowerCase();
 }
 
 const looksLikeDomain = (s: string) => /^[\w-]+(\.[\w-]+)+$/.test(s.trim());
@@ -175,7 +178,7 @@ export function readSheet(rows: string[][]): DraftLogin[] {
     }
     if (!d.site && d.url) d.site = siteFromUrl(d.url);
     if (looksLikeDomain(d.site)) {
-      // Google's export uses the domain as the name.
+      // Google's export uses the web address as the name; keep it as the address.
       if (!d.url) d.url = d.site;
       d.site = siteFromUrl(d.site);
     }

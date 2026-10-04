@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { isLarkspur, LARKSPUR, LarkspurFrame, LarkspurHeader, TesseractBadge, VaultGate } from "@/components/Larkspur";
 import { useVault } from "@/components/VaultProvider";
+import { Cube } from "@/components/Cube";
 
 type Bar = { kind: "hidden" } | { kind: "offer" } | { kind: "saved"; updated: boolean } | { kind: "dismissed" };
 
@@ -49,7 +50,7 @@ export default function LarkspurSignup() {
   const barNode = showBar && (
     <div className="mx-auto w-full max-w-2xl [animation:drop_.35s_ease-out] rounded-2xl border-2 border-accent bg-panel p-4 shadow-2xl shadow-black sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent font-black text-accent-ink">T</span>
+        <Cube size={40} />
         <div className="min-w-0 flex-1">
           {bar.kind === "saved" ? (
             <>

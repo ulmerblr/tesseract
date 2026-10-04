@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useVault } from "@/components/VaultProvider";
 import { Page } from "@/components/RequireUnlocked";
 import { LockIcon } from "@/components/TopBar";
-import { WrongPasswordError } from "@/lib/crypto";
+import { UnlockPanel } from "@/components/UnlockPanel";
 
 function nextPath(): string {
   const next = new URLSearchParams(window.location.search).get("next") ?? "/vault";
@@ -14,29 +14,13 @@ function nextPath(): string {
 }
 
 export default function UnlockPage() {
-  const { status, unlock } = useVault();
+  const { status, lockReason, biometricOn } = useVault();
   const router = useRouter();
-  const [pw, setPw] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (status === "none") router.replace("/setup");
     if (status === "unlocked") router.replace(nextPath());
   }, [status, router]);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      await unlock(pw);
-    } catch (err) {
-      setError(err instanceof WrongPasswordError ? "Wrong master password. Try again." : "Couldn't open the vault.");
-      setPw("");
-      setBusy(false);
-    }
-  }
 
   return (
     <Page>
@@ -45,28 +29,21 @@ export default function UnlockPage() {
           <LockIcon className="h-12 w-12" />
         </div>
         <h1 className="display-title mt-6">Vault locked</h1>
-        <p className="mt-3 text-lg text-muted">Enter your master password to open it.</p>
+        <p className="mt-3 text-lg text-muted">
+          {lockReason === "idle"
+            ? "Locked after 2 minutes without activity."
+            : biometricOn
+              ? "Use your face or fingerprint, or your master password."
+              : "Enter your master password to open it."}
+        </p>
       </div>
-      <form onSubmit={submit} className="card mx-auto mt-8 grid max-w-md gap-4">
-        <label className="label" htmlFor="pw">Master password</label>
-        <input
-          id="pw"
-          className={`field text-lg ${error ? "border-danger" : ""}`}
-          type="password"
-          autoComplete="current-password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          autoFocus
-        />
-        {error && (
-          <p role="alert" className="rounded-xl bg-danger px-4 py-3 text-center font-black text-white">
-            {error}
-          </p>
+      <div className="card mx-auto mt-8 max-w-md">
+        {status === "locked" && (
+          // Ask automatically only when Tesseract was just opened or reloaded. After Lock or an idle
+          // lock, the person clicks first (no system prompt popping up at someone who walked away).
+          <UnlockPanel key={String(biometricOn)} variant="page" autoPrompt={lockReason === null} />
         )}
-        <button className="btn-accent text-lg" disabled={busy || !pw}>
-          {busy ? "Unlocking…" : "Unlock"}
-        </button>
-      </form>
+      </div>
     </Page>
   );
 }

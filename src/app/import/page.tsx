@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHydrated } from "@/lib/useHydrated";
 import Link from "next/link";
 import { useVault } from "@/components/VaultProvider";
@@ -44,9 +44,16 @@ export default function ImportPage() {
 }
 
 function Importer() {
-  const { addLogins } = useVault();
+  const { addLogins, setAutoLockPaused } = useVault();
   const [step, setStep] = useState<Step>({ kind: "pick" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ title: string; detail: string } | null>(null);
+
+  // Don't auto-lock (and lose the preview) while rows are waiting to be imported.
+  const pending = step.kind === "preview" && step.drafts.length > 0;
+  useEffect(() => {
+    setAutoLockPaused(pending);
+    return () => setAutoLockPaused(false);
+  }, [pending, setAutoLockPaused]);
   const hydrated = useHydrated();
   const modelId = hydrated ? getModel() : "";
   const realReader = { on: hydrated && Boolean(getApiKey()), model: MODELS.find((m) => m.id === modelId)?.label ?? modelId };
@@ -54,20 +61,30 @@ function Importer() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function read(fileName: string, buf: ArrayBuffer, isSample: boolean) {
-    setError("");
+    setError(null);
     setStep({ kind: "reading", fileName });
+    const apiKey = getApiKey();
+    let extracted: Extracted;
     try {
-      const extracted = await extractFile(fileName, buf);
-      const apiKey = getApiKey();
+      extracted = await extractFile(fileName, buf);
+    } catch (err) {
+      setError({ title: `Couldn't open ${fileName}`, detail: err instanceof Error ? err.message : "The file couldn't be read." });
+      setStep({ kind: "pick" });
+      return;
+    }
+    try {
       const drafts = apiKey ? await readWithClaude(extracted, apiKey) : readSimulated(extracted);
       if (!drafts.length) {
-        setError(`No logins were found in ${fileName}.`);
+        setError({ title: "No logins found", detail: `Nothing that looks like a login was found in ${fileName}.` });
         setStep({ kind: "pick" });
         return;
       }
       setStep({ kind: "preview", fileName, drafts, isSample });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read that file.");
+      setError({
+        title: `Claude (${realReader.model}) couldn't read ${fileName}`,
+        detail: err instanceof Error ? err.message : "The request failed.",
+      });
       setStep({ kind: "pick" });
     }
   }
@@ -214,7 +231,18 @@ function Importer() {
         </div>
       )}
 
-      {error && <p role="alert" className="mt-4 rounded-xl bg-danger px-4 py-3 font-bold text-white">{error}</p>}
+      {error && (
+        <div role="alert" className="mt-6 rounded-2xl border-4 border-danger bg-danger/15 p-5">
+          <div className="text-xl font-black text-danger">{error.title}</div>
+          <p className="mt-1 text-lg font-bold">{error.detail}</p>
+          {realReader.on && (
+            <p className="mt-2 text-sm text-muted">
+              Nothing was imported. You can try again, pick the other model on <Link href="/admin" className="underline">Admin</Link>, or clear
+              the key there to use the simulated reader.
+            </p>
+          )}
+        </div>
+      )}
 
       <h2 className="mt-12 text-2xl font-black">Or try a sample (all fake)</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">

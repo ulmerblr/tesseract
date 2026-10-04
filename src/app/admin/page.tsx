@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { FingerprintIcon } from "@/components/UnlockPanel";
+import { checkBiometricSupport, describeBiometricError, type BiometricSupport } from "@/lib/biometric";
 import { useHydrated } from "@/lib/useHydrated";
 import { useRouter } from "next/navigation";
 import { useVault } from "@/components/VaultProvider";
@@ -110,7 +113,7 @@ export default function AdminPage() {
                 <input
                   type="radio"
                   name="model"
-                  className="h-5 w-5 accent-[#b8ff24]"
+                  className="h-5 w-5 accent-[#18c2ff]"
                   checked={model === m.id}
                   onChange={() => {
                     setModelState(m.id);
@@ -129,6 +132,8 @@ export default function AdminPage() {
           </div>
         </fieldset>
       </section>
+
+      <BiometricSection />
 
       <section className="card mt-6 border-danger">
         <h2 className="text-2xl font-black">Reset Demo</h2>
@@ -153,5 +158,86 @@ export default function AdminPage() {
         )}
       </section>
     </Page>
+  );
+}
+
+function BiometricSection() {
+  const { status, biometricOn, enableBiometric, disableBiometric } = useVault();
+  const [support, setSupport] = useState<BiometricSupport | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void checkBiometricSupport().then((s) => live && setSupport(s));
+    return () => {
+      live = false;
+    };
+  }, [biometricOn]);
+
+  return (
+    <section className="card mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-2xl font-black">
+          <FingerprintIcon className="h-6 w-6 text-accent" /> Face/fingerprint unlock
+        </h2>
+        {biometricOn ? (
+          <span className="rounded-lg bg-accent px-3 py-1 text-sm font-black text-accent-ink uppercase">On</span>
+        ) : (
+          <span className="rounded-lg border-2 border-line px-3 py-1 text-sm font-black text-muted uppercase">Off</span>
+        )}
+      </div>
+      <p className="mt-2 text-muted">
+        Uses Windows Hello or Touch ID through a passkey. The operating system checks your face or fingerprint and releases
+        a secret that decrypts the vault key. Tesseract never sees face or fingerprint data. The master password always works.
+      </p>
+
+      {support === null ? (
+        <p className="mt-4 text-muted">Checking this device…</p>
+      ) : !support.available && !biometricOn ? (
+        <p className="mt-4 font-bold">{support.reason}</p>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {biometricOn ? (
+            <button
+              className="btn-danger"
+              onClick={() => {
+                disableBiometric();
+                setMessage({ ok: true, text: "Turned off. The passkey's copy of the vault key was deleted." });
+              }}
+            >
+              Turn off
+            </button>
+          ) : status === "unlocked" ? (
+            <button
+              className="btn-accent"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setMessage(null);
+                try {
+                  await enableBiometric();
+                  setMessage({ ok: true, text: "Face/fingerprint unlock is on. Try it: Lock, then unlock." });
+                } catch (err) {
+                  setMessage({ ok: false, text: describeBiometricError(err) });
+                }
+                setBusy(false);
+              }}
+            >
+              <FingerprintIcon /> {busy ? "Waiting for your device…" : "Turn on"}
+            </button>
+          ) : (
+            <p className="font-bold">
+              <Link href="/unlock?next=%2Fadmin" className="text-accent underline">Unlock the vault</Link> to turn this on.
+            </p>
+          )}
+        </div>
+      )}
+      {message && (
+        <p role="alert" className={`mt-4 rounded-xl px-4 py-3 font-bold ${message.ok ? "bg-accent text-accent-ink" : "bg-danger text-white"}`}>
+          {message.text}
+        </p>
+      )}
+    </section>
   );
 }
