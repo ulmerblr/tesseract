@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import * as z from "zod/v4";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { clientFor, describeError, isAllowedModel, json } from "@/lib/server/claude";
@@ -6,6 +7,8 @@ import { clientFor, describeError, isAllowedModel, json } from "@/lib/server/cla
 export const maxDuration = 120;
 
 const MAX_CHARS = 200_000;
+// Vercel caps request bodies at about 4.5 MB, so base64 PDFs stay under that.
+const MAX_PDF_B64 = 4_300_000;
 
 const LoginSchema = z.object({
   site: z.string(),
@@ -35,19 +38,31 @@ For every account in the document, return one entry:
 Skip lines that aren't accounts (titles, stray reminders). Use "" or [] for anything missing; never make values up.`;
 
 export async function POST(request: Request) {
-  let body: { apiKey?: unknown; model?: unknown; text?: unknown; kind?: unknown };
+  let body: { apiKey?: unknown; model?: unknown; text?: unknown; kind?: unknown; pdf?: unknown };
   try {
     body = await request.json();
   } catch {
     return json({ error: "Bad request." }, 400);
   }
-  const { apiKey, model, text, kind } = body;
+  const { apiKey, model, text, kind, pdf } = body;
   if (typeof apiKey !== "string" || !apiKey.trim()) return json({ error: "No API key was sent." }, 400);
   if (!isAllowedModel(model)) return json({ error: "Unknown model." }, 400);
-  if (typeof text !== "string" || !text.trim()) return json({ error: "The file had no readable text." }, 400);
-  if (text.length > MAX_CHARS) return json({ error: "That file is too large for the demo reader." }, 413);
 
-  const source = kind === "word" ? "a Word document of free-form notes" : "a spreadsheet exported as CSV";
+  let content: Anthropic.ContentBlockParam[];
+  if (kind === "pdf") {
+    // The PDF itself goes to Claude as a document, so scanned pages can be read too.
+    if (typeof pdf !== "string" || !pdf) return json({ error: "No PDF was sent." }, 400);
+    if (pdf.length > MAX_PDF_B64) return json({ error: "That PDF is too large for the demo reader (about 3 MB at most)." }, 413);
+    content = [
+      { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf } },
+      { type: "text", text: "This PDF is a person's list of logins (it may be a scan or a printout). Extract every login." },
+    ];
+  } else {
+    if (typeof text !== "string" || !text.trim()) return json({ error: "The file had no readable text." }, 400);
+    if (text.length > MAX_CHARS) return json({ error: "That file is too large for the demo reader." }, 413);
+    const source = kind === "word" ? "a Word document of free-form notes" : "a spreadsheet exported as CSV";
+    content = [{ type: "text", text: `Here is ${source}. Extract every login.\n\n<document>\n${text}\n</document>` }];
+  }
 
   try {
     // Only the model chosen on the Admin page; no fallback to another model.
@@ -56,12 +71,7 @@ export async function POST(request: Request) {
       max_tokens: 16000,
       output_config: { effort: "medium", format: zodOutputFormat(ResultSchema) },
       system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Here is ${source}. Extract every login.\n\n<document>\n${text}\n</document>`,
-        },
-      ],
+      messages: [{ role: "user", content }],
     });
 
     if (response.stop_reason === "refusal") {

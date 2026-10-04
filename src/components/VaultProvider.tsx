@@ -28,7 +28,14 @@ type VaultContextValue = {
   disableBiometric(): void;
   setAutoLockPaused(paused: boolean): void;
   lock(): void;
+  dismissedDuplicates: string[];
   addLogins(items: LoginFields[]): Promise<Login[]>;
+  /** Replaces the whole login list in one save (imports with merges, duplicate merges). */
+  replaceLogins(next: Login[]): Promise<void>;
+  dismissDuplicates(key: string): Promise<void>;
+  /** Re-checks identity without changing the session: true only if the vault really opened. */
+  verifyPassword(password: string): Promise<boolean>;
+  verifyBiometric(signal?: AbortSignal): Promise<void>;
   updateLogin(id: string, fields: LoginFields): Promise<void>;
   deleteLogin(id: string): Promise<void>;
   resetDemo(): void;
@@ -59,6 +66,8 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [bioVersion, setBioVersion] = useState(0);
   const biometricOn = hydrated && bioVersion >= 0 && bio.biometricEnabled();
   const loginsRef = useRef<Login[]>([]);
+  const dismissedRef = useRef<string[]>([]);
+  const [dismissedDuplicates, setDismissed] = useState<string[]>([]);
   const lastActivity = useRef(0);
   const [lockInSeconds, setLockInSeconds] = useState(AUTO_LOCK_SECONDS);
   const [clip, setClip] = useState<ClipState>(null);
@@ -67,22 +76,28 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     setLockReason(reason);
     keyRef.current = null;
     loginsRef.current = [];
+    dismissedRef.current = [];
     setLogins([]);
+    setDismissed([]);
     setStatus(vaultExists() ? "locked" : "none");
   }, []);
 
-  const persist = useCallback(async (next: Login[]) => {
+  const persist = useCallback(async (next: Login[], dismissed: string[] = dismissedRef.current) => {
     const handle = keyRef.current;
     if (!handle) throw new Error("The vault is locked.");
     loginsRef.current = next;
+    dismissedRef.current = dismissed;
     setLogins(next);
-    await saveVault(handle, { logins: next });
+    setDismissed(dismissed);
+    await saveVault(handle, { logins: next, dismissedDuplicates: dismissed });
   }, []);
 
   const opened = useCallback(({ session, data }: { session: VaultSession; data: VaultData }) => {
     keyRef.current = session;
     loginsRef.current = data.logins;
+    dismissedRef.current = data.dismissedDuplicates ?? [];
     setLogins(data.logins);
+    setDismissed(dismissedRef.current);
     lastActivity.current = Date.now();
     setLockReason(null);
     setStatus("unlocked");
@@ -115,6 +130,27 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     },
     [persist],
   );
+
+  const replaceLogins = useCallback(async (next: Login[]) => persist(next), [persist]);
+
+  const dismissDuplicates = useCallback(
+    async (key: string) => persist(loginsRef.current, [...new Set([...dismissedRef.current, key])]),
+    [persist],
+  );
+
+  const verifyPassword = useCallback(async (password: string) => {
+    try {
+      await openWithPassword(password);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const verifyBiometric = useCallback(async (signal?: AbortSignal) => {
+    // Genuinely decrypts the vault again through the passkey's PRF; the result is discarded.
+    await bio.unlockWithBiometric(signal);
+  }, []);
 
   const updateLogin = useCallback(
     async (id: string, fields: LoginFields) => {
@@ -213,7 +249,12 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
         disableBiometric,
         setAutoLockPaused,
         lock: () => lock("manual"),
+        dismissedDuplicates,
         addLogins,
+        replaceLogins,
+        dismissDuplicates,
+        verifyPassword,
+        verifyBiometric,
         updateLogin,
         deleteLogin,
         resetDemo,

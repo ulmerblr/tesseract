@@ -23,7 +23,11 @@ export type DraftLogin = LoginFields & {
   flagReason: string;
 };
 
-export type VaultData = { logins: Login[] };
+export type VaultData = {
+  logins: Login[];
+  /** Groups the person marked "Not duplicates", as sorted, comma-joined login ids. */
+  dismissedDuplicates?: string[];
+};
 
 export function emptyFields(): LoginFields {
   return { site: "", url: "", username: "", password: "", hints: [], questions: [], notes: [] };

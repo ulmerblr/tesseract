@@ -6,6 +6,7 @@ import { useVault } from "@/components/VaultProvider";
 import { Page, RequireUnlocked } from "@/components/RequireUnlocked";
 import { LoginEditor, cleanFields } from "@/components/LoginEditor";
 import { LocalPromise } from "@/components/LocalPromise";
+import { FindDuplicates } from "@/components/FindDuplicates";
 import { emptyFields, type Login, type LoginFields } from "@/lib/types";
 
 type Mode = { kind: "list" } | { kind: "view"; id: string } | { kind: "edit"; id: string } | { kind: "new" };
@@ -32,6 +33,7 @@ function Vault() {
     );
   }, [logins, query]);
 
+  const [findingDuplicates, setFindingDuplicates] = useState(false);
   const selected = "id" in mode ? logins.find((l) => l.id === mode.id) : undefined;
   const panelOpen = mode.kind !== "list";
 
@@ -44,87 +46,103 @@ function Vault() {
             {logins.length} login{logins.length === 1 ? "" : "s"} · encrypted on this laptop
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost" onClick={() => setFindingDuplicates(true)}>Find Duplicates</button>
+          <Link href="/vault/print" className="btn-ghost">Print Emergency Sheet</Link>
           <Link href="/import" className="btn-ghost">Import</Link>
-          <button className="btn-accent" onClick={() => setMode({ kind: "new" })}>+ New</button>
+          <button
+            className="btn-accent"
+            onClick={() => {
+              setFindingDuplicates(false);
+              setMode({ kind: "new" });
+            }}
+          >
+            + New
+          </button>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <section className={panelOpen ? "hidden lg:block" : ""}>
-          <input
-            type="search"
-            className="field text-lg"
-            placeholder="Search websites, usernames, notes…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search the vault"
-          />
-          {logins.length === 0 ? (
-            <div className="card mt-4 text-center">
-              <p className="text-xl font-black">Your vault is empty.</p>
-              <p className="mt-2 text-muted">Bring in passwords from a file, or add one by hand.</p>
-              <div className="mt-4 flex justify-center gap-2">
-                <Link href="/import" className="btn-accent">Import passwords</Link>
-                <button className="btn-ghost" onClick={() => setMode({ kind: "new" })}>+ New</button>
+      {findingDuplicates ? (
+        <div className="mt-8">
+          <FindDuplicates onClose={() => setFindingDuplicates(false)} />
+        </div>
+      ) : (
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+          <section className={panelOpen ? "hidden lg:block" : ""}>
+            <input
+              type="search"
+              className="field text-lg"
+              placeholder="Search websites, usernames, notes…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search the vault"
+            />
+            {logins.length === 0 ? (
+              <div className="card mt-4 text-center">
+                <p className="text-xl font-black">Your vault is empty.</p>
+                <p className="mt-2 text-muted">Bring in passwords from a file, or add one by hand.</p>
+                <div className="mt-4 flex justify-center gap-2">
+                  <Link href="/import" className="btn-accent">Import passwords</Link>
+                  <button className="btn-ghost" onClick={() => setMode({ kind: "new" })}>+ New</button>
+                </div>
               </div>
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="mt-6 text-center text-muted">Nothing matches “{query}”.</p>
-          ) : (
-            <ul className="mt-4 grid gap-2">
-              {filtered.map((l) => {
-                const active = "id" in mode && mode.id === l.id;
-                return (
-                  <li key={l.id}>
-                    <button
-                      onClick={() => setMode({ kind: "view", id: l.id })}
-                      className={`flex w-full items-center gap-4 rounded-2xl border-2 p-4 text-left transition-colors ${
-                        active ? "border-accent bg-panel-2" : "border-line bg-panel hover:border-fg"
-                      }`}
-                    >
-                      <Monogram name={l.site || l.url} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-lg font-black">{l.site || l.url || "Untitled"}</div>
-                        <div className="truncate text-sm text-muted">{l.username || "no username"}</div>
-                      </div>
-                      <span className="text-2xl text-muted">›</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+            ) : filtered.length === 0 ? (
+              <p className="mt-6 text-center text-muted">Nothing matches “{query}”.</p>
+            ) : (
+              <ul className="mt-4 grid gap-2">
+                {filtered.map((l) => {
+                  const active = "id" in mode && mode.id === l.id;
+                  return (
+                    <li key={l.id}>
+                      <button
+                        onClick={() => setMode({ kind: "view", id: l.id })}
+                        className={`flex w-full items-center gap-4 rounded-2xl border-2 p-4 text-left transition-colors ${
+                          active ? "border-accent bg-panel-2" : "border-line bg-panel hover:border-fg"
+                        }`}
+                      >
+                        <Monogram name={l.site || l.url} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-lg font-black">{l.site || l.url || "Untitled"}</div>
+                          <div className="truncate text-sm text-muted">{l.username || "no username"}</div>
+                        </div>
+                        <span className="text-2xl text-muted">›</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
 
-        <section className={panelOpen ? "" : "hidden lg:block"}>
-          {mode.kind === "list" && (
-            <div className="card hidden h-full min-h-60 items-center justify-center text-center text-muted lg:flex">
-              Pick a login to see everything saved for it.
-            </div>
-          )}
-          {mode.kind === "view" && selected && (
-            <LoginDetail login={selected} onBack={() => setMode({ kind: "list" })} onEdit={() => setMode({ kind: "edit", id: selected.id })} />
-          )}
-          {mode.kind === "edit" && selected && (
-            <EditPanel
-              title={`Edit ${selected.site || "login"}`}
-              initial={selected}
-              onCancel={() => setMode({ kind: "view", id: selected.id })}
-              onSaved={() => setMode({ kind: "view", id: selected.id })}
-              id={selected.id}
-            />
-          )}
-          {mode.kind === "new" && (
-            <EditPanel
-              title="New login"
-              initial={emptyFields()}
-              onCancel={() => setMode({ kind: "list" })}
-              onSaved={(id) => setMode({ kind: "view", id })}
-            />
-          )}
-        </section>
-      </div>
+          <section className={panelOpen ? "" : "hidden lg:block"}>
+            {mode.kind === "list" && (
+              <div className="card hidden h-full min-h-60 items-center justify-center text-center text-muted lg:flex">
+                Pick a login to see everything saved for it.
+              </div>
+            )}
+            {mode.kind === "view" && selected && (
+              <LoginDetail key={selected.id} login={selected} onBack={() => setMode({ kind: "list" })} onEdit={() => setMode({ kind: "edit", id: selected.id })} />
+            )}
+            {mode.kind === "edit" && selected && (
+              <EditPanel
+                title={`Edit ${selected.site || "login"}`}
+                initial={selected}
+                onCancel={() => setMode({ kind: "view", id: selected.id })}
+                onSaved={() => setMode({ kind: "view", id: selected.id })}
+                id={selected.id}
+              />
+            )}
+            {mode.kind === "new" && (
+              <EditPanel
+                title="New login"
+                initial={emptyFields()}
+                onCancel={() => setMode({ kind: "list" })}
+                onSaved={(id) => setMode({ kind: "view", id })}
+              />
+            )}
+          </section>
+        </div>
+      )}
       <LocalPromise className="mt-12 border-t-2 border-line pt-6" />
     </Page>
   );

@@ -71,3 +71,46 @@ body {
     opacity: 1;
   }
 }
+
+/* ----- Emergency Sheet: only ever visible on paper ----- */
+@media screen {
+  .print-root {
+    display: none;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+  .print-root {
+    display: block;
+  }
+}
+
+.sheet {
+  color: #000;
+  background: #fff;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.35;
+}
+.sheet-mono {
+  font-family: var(--font-print-mono), "DejaVu Sans Mono", monospace;
+  /* Slashed zero where the font offers it. */
+  font-feature-settings: "zero" 1;
+  font-variant-numeric: slashed-zero;
+}
+.sheet-entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  border: 1.5pt solid #000;
+  border-radius: 6pt;
+  padding: 8pt 10pt;
+  margin: 0 0 8pt;
+}

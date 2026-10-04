@@ -12,7 +12,7 @@ const HEADER_PATTERNS: [Field, RegExp][] = [
   ["answer", /(^|\W)(ans|answer|a\d*)(\W|$)|answer/i],
   ["hint", /hint|reminder|clue/i],
   ["notes", /note|comment|other|misc|extra|memo|remarks/i],
-  ["url", /url|link|web\s*addr|domain|address|^web$/i],
+  ["url", /url|link|web\s*addr|web\s*site|domain|address|^web$|^site$/i],
   ["username", /user|login|e-?mail|member|\bid\b|handle/i],
   ["password", /pass|^pw|pwd|secret|pin\b|code/i],
   ["site", /site|name|acct|account|service|company|title|where|what|app/i],
@@ -136,10 +136,13 @@ export function readSheet(rows: string[][]): DraftLogin[] {
       const field = fields[i];
       switch (field) {
         case "site":
-          d.site = d.site ? `${d.site} ${value}` : value;
+          // The name comes from one account/name column only; never glue other columns onto it.
+          if (!d.site) d.site = value;
+          else d.notes.push(`${headers[i]}: ${value}`);
           break;
         case "url":
-          d.url = value;
+          if (!d.url) d.url = value;
+          else d.notes.push(`${headers[i]}: ${value}`);
           break;
         case "username":
           d.username = d.username || value;
@@ -269,8 +272,10 @@ export function readWord(text: string): DraftLogin[] {
       if (!used) leftover.push(line);
     });
 
-    // A block with no login details at all (a title, a stray note) is skipped.
+    // A block with no login details at all (a title, a stray note) is skipped,
+    // and so is a stray line like "Wi-Fi password is on the router".
     if (!d.username && !d.password) continue;
+    if (!d.username && !d.url && !d.site) continue;
 
     d.notes.push(...leftover.filter((l) => l !== d.site && !l.toLowerCase().includes(d.url || "\u0000")));
     if (d.url && (!d.site || GENERIC_NAMES.test(d.site))) d.site = siteFromUrl(d.url);
